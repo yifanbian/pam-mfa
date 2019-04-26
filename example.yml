@@ -1,0 +1,5 @@
+totp_key: ""
+yubico_otp_id: ""
+auth_preference:
+  - yubico_otp
+  - totp
