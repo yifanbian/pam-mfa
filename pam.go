@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"unsafe"
 )
 
@@ -44,7 +43,7 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 		return C.PAM_USER_UNKNOWN
 	}
 
-	r := pamAuthenticate(os.Stderr, uid, C.GoString(cUsername), sliceFromArgv(argc, argv))
+	r := pamAuthenticate(pamh, uid, C.GoString(cUsername), sliceFromArgv(argc, argv))
 	if r == AuthError {
 		return C.PAM_AUTH_ERR
 	}
@@ -53,5 +52,5 @@ func pam_sm_authenticate(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char)
 
 //export pam_sm_setcred
 func pam_sm_setcred(pamh *C.pam_handle_t, flags, argc C.int, argv **C.char) C.int {
-	return C.PAM_IGNORE
+	return C.PAM_SUCCESS
 }

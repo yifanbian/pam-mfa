@@ -4,6 +4,16 @@ This is a pam module that will authenticate user through the second factor.
 
 Currently we support user to authenticate with YubiKey OTP or Time-based OTP.
 
+## Warning
+
+This project is still under development.
+
+- All functions are tested with `pamtester`.
+- TOTP verification can work in real SSH authentication procedure.
+- Yubico OTP verification cannot work in real SSH authentication procedure.
+  I think it's related to the HTTP request.
+  That remains unfixed.
+
 ## Usage
 
 ```bash
@@ -66,6 +76,5 @@ For further information of Anti-996 movement, please check out [this repository]
 
 In this project, we use some third-party libraries to implement some functions.
 
-- `github.com/GeertJohan/yubigo`: Used to handle Yubico OTP verifications. BSD 2-Clause Simplified License.
 - `github.com/dgryski/dgoogauth`: Used to verify TOTP codes. License unclear.
 - `github.com/uber/pam-ussh`: Inspiration of this project, and we used some code of it. MIT License.

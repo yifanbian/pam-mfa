@@ -1,47 +1,43 @@
 package main
 
+/*
+#include <security/pam_appl.h>
+*/
+import "C"
 import (
 	"fmt"
-	"github.com/GeertJohan/yubigo"
 	"github.com/dgryski/dgoogauth"
-	"io"
+	"pam_mfa/yubico_otp"
 	"strings"
 )
 
-func authenticateYubicoOTP(w io.Writer, yubico_otp_id string) bool {
-	yubiAuth, err := yubigo.NewYubiAuth(yubicoOtpId, yubicoOtpSecret)
+func authenticateYubicoOTP(pamh *C.pam_handle_t, yubico_otp_id string) bool {
+	yubiAuth, err := yubico_otp.NewYubiAuth(yubicoOtpId, yubicoOtpSecret)
 	if err != nil {
 		pamLog("Unable to setup Yubico OTP Auth")
 		return false
 	}
-	fmt.Fprintf(w, "YubiKey OTP: ")
-	yubico_otp, err := ReadPasswordFromStdin()
-	if err != nil {
+	otp := strings.TrimSpace(requestPass(pamh, C.PAM_PROMPT_ECHO_OFF, "YubiKey OTP: "))
+	if !strings.HasPrefix(otp, yubico_otp_id) {
 		return false
 	}
-	if !strings.HasPrefix(yubico_otp, yubico_otp_id) {
-		return false
-	}
-	_, ok, err := yubiAuth.Verify(yubico_otp)
+	ok, err := yubiAuth.VerifyOTP(otp)
 	if err != nil {
+		fmt.Printf("%s\n", err)
 		return false
 	}
 	return ok
 }
 
-func authenticateTOTP(w io.Writer, totp_secret string) bool {
+func authenticateTOTP(pamh *C.pam_handle_t, totp_secret string) bool {
 	totp_secret = strings.ToUpper(totp_secret)
 	totp_config := dgoogauth.OTPConfig{
 		Secret:     totp_secret,
 		WindowSize: totpWindow,
 		UTC:        true,
 	}
-	fmt.Fprintf(w, "TOTP Code: ")
-	totp_code, err := ReadPasswordFromStdin()
-	if err != nil {
-		return false
-	}
-	ok, err := totp_config.Authenticate(strings.TrimSpace(totp_code))
+	totp_code := strings.TrimSpace(requestPass(pamh, C.PAM_PROMPT_ECHO_OFF, "TOTP: "))
+	ok, err := totp_config.Authenticate(totp_code)
 	if err != nil {
 		return false
 	}

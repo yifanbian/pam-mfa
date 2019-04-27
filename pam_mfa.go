@@ -2,9 +2,12 @@
 
 package main
 
+/*
+#include <security/pam_appl.h>
+*/
+import "C"
 import (
 	"fmt"
-	"io"
 	"log/syslog"
 	"os"
 	"os/user"
@@ -12,7 +15,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 )
 
 var (
@@ -37,7 +39,7 @@ func pamLog(format string, args ...interface{}) {
 	l.Warning(fmt.Sprintf(format, args...))
 }
 
-func authenticate(w io.Writer, uid int, username string) AuthResult {
+func authenticate(pamh *C.pam_handle_t, uid int, username string) AuthResult {
 	origEUID := os.Geteuid()
 	if os.Getuid() != origEUID || origEUID == 0 {
 		if !seteuid(uid) {
@@ -71,16 +73,14 @@ func authenticate(w io.Writer, uid int, username string) AuthResult {
 		auth_result := false
 		switch auth_method {
 		case "yubico_otp":
-			auth_result = authenticateYubicoOTP(w, config["yubico_otp_id"].(string))
+			auth_result = authenticateYubicoOTP(pamh, config["yubico_otp_id"].(string))
 		case "totp":
-			auth_result = authenticateTOTP(w, config["totp_key"].(string))
+			auth_result = authenticateTOTP(pamh, config["totp_key"].(string))
 		}
-		fmt.Fprintf(w, "\n")
 		if auth_result {
 			pamLog("User %s passed MFA method %s.", usr.Username, auth_method)
 			return AuthSuccess
 		} else {
-			time.Sleep(3 * time.Second)
 			pamLog("User %s failed MFA method %s, turning to next method", usr.Username, auth_method)
 		}
 	}
@@ -88,7 +88,7 @@ func authenticate(w io.Writer, uid int, username string) AuthResult {
 	return AuthError
 }
 
-func pamAuthenticate(w io.Writer, uid int, username string, argv []string) AuthResult {
+func pamAuthenticate(pamh *C.pam_handle_t, uid int, username string, argv []string) AuthResult {
 	runtime.GOMAXPROCS(1)
 
 	for _, arg := range argv {
@@ -103,7 +103,7 @@ func pamAuthenticate(w io.Writer, uid int, username string, argv []string) AuthR
 		}
 	}
 
-	return authenticate(w, uid, username)
+	return authenticate(pamh, uid, username)
 }
 
 func main() {}
